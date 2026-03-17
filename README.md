@@ -2,7 +2,7 @@ Implemented basic operations (including `+-*/<<>>%`) for long integers.
 
 ## Usage
 
-### `judge.py`
+### judge.py
 
 ```bash
 python3 judge.py --n ... --case_num ... --length ... --timeout ... --maxsize ...
