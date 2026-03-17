@@ -13,7 +13,7 @@ See `judge.py` for detailed usage.
 ### cpp code
 
 ```bash
-g++ main.cpp SuperLong.cpp -o build/superlong
+g++ main.cpp SuperLong.cpp --std=c++17 -o build/superlong
 ./build/superlong
 ```
 
