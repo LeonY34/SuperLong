@@ -3,6 +3,7 @@
 
 signed main() {
     int n, case_num;
+    SuperLong::setMulMethod(1);
     std::cin >> n >> case_num;
     for (int i = 0; i < n; ++i) {
         if (case_num == 1) { // 大整数+小整数

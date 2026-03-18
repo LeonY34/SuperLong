@@ -217,6 +217,60 @@ SuperLong SuperLong::mulNaive(const SuperLong& other) const {
     return now;
 }
 
+SuperLong SuperLong::extract(const SuperLong& a, const size_t l, const size_t r) {
+    SuperLong b;
+    b.maintainSpace(r - l);
+    for (size_t i = l; i < r; ++i) {
+        b.data[i - l] = a.data[i];
+    }
+    b.strip();
+    return b;
+}
+
+SuperLong SuperLong::calcMul(
+    const SuperLong& a, const SuperLong& b
+) {
+    if (!a.size || !b.size) return 0;
+    if (a.size == 1) return b.mulSmall(a.data[0]).toAbs();
+    if (b.size == 1) return a.mulSmall(b.data[0]).toAbs();
+    if (a.size <= 16 || b.size <= 16) return a.mulNaive(b);
+    // a = p1 * x + q1
+    // b = p2 * x + q2
+    // 
+    // a * b = p1 * p2 * x^2 + (p1 * q2 + p2 * q1) * x + q1 * q2
+    // calc: --------
+    // A = p1 * p2
+    // B = q1 * q2
+    // C = (p1 + q1)(p2 + q2)
+    // D = C - A - B = (p1q2 + q1p2)
+    // ------
+    // a * b = A * x^2 + D * x + B
+    // only three muls needed.
+    const size_t mid = std::min(a.size >> 1, b.size >> 1);
+    SuperLong q1 = extract(a, 0, mid);
+    SuperLong p1 = extract(a, mid, a.size);
+    SuperLong q2 = extract(b, 0, mid);
+    SuperLong p2 = extract(b, mid, b.size);
+    SuperLong A = calcMul(p1, p2);
+    SuperLong B = calcMul(q1, q2);
+    SuperLong D = calcMul(p1 + q1, p2 + q2) - (A + B);
+    if (D.sign) THROW_ERROR("Not expected! D >= 0 should hold.");
+    return ((A << (2 * mid * fullBits)) + (D << (mid * fullBits)) + B);
+}
+
+void SuperLong::imulDaC(const SuperLong& other) {
+    if (!size || !other.size) return *this = 0, void();
+    bool sg = sign;
+    *this = calcMul(*this, other);
+    sign = sg;
+}
+
+SuperLong SuperLong::mulDaC(const SuperLong& other) const {
+    if (!size || !other.size) return 0;
+    bool sg = sign;
+    return calcMul(*this, other).toSign(sg);
+}
+
 HF SuperLong::getHF(const size_t i) const {
     /*
         get a digit in halfbits
@@ -234,10 +288,6 @@ SuperLong SuperLong::idivKnuth(const SuperLong& other) {
         assume abs.
     */
     if (!other.size) THROW_ERROR("div by 0! idivKnuth.");
-    // const bool origSign = sign;
-    // sign = 0;
-    // SuperLong divisorAbs = (other.sign ? -other : other);
-    // divisorAbs.sign = 0;
     if (!size) return 0;
     if (size < other.size) {
         SuperLong remain(0);
@@ -248,36 +298,26 @@ SuperLong SuperLong::idivKnuth(const SuperLong& other) {
     size_t pos, otherPos;
     pos = getHF(size * 2 - 1) ? size * 2 : size * 2 - 1;
     otherPos = other.getHF(other.size * 2 - 1) ? other.size * 2 : other.size * 2 - 1;
-    // otherPos = divisorAbs.getHF(divisorAbs.size * 2 - 1) ? divisorAbs.size * 2 : divisorAbs.size * 2 - 1;
     if (otherPos == 1) {
         const HF remain = idivSmall(other.getHF(0));
-        // sign = origSign;
         return SuperLong(LL(remain));
     }
     HF v1_ = other.getHF(otherPos - 1);
     HF d = 1;
     if (v1_ <= (halfMask >> 1)) d = (LL(halfMask) + 1) / (v1_ + 1);
-    // SuperLong otherNorm(divisorAbs);
     SuperLong now(other);
     if (d > 1) {
         imulSmall(d);
-        // otherNorm.imulSmall(d);
         now.imulSmall(d);
-        // pos = getHF(size * 2 - 1) ? size * 2 : size * 2 - 1;
-        // otherPos = otherNorm.getHF(otherNorm.size * 2 - 1) ? otherNorm.size * 2 : otherNorm.size * 2 - 1;
     }
-    // const HF v1 = otherNorm.getHF(otherPos - 1);
-    // const HF v2 = otherNorm.getHF(otherPos - 2);
     const HF v1 = now.getHF(otherPos - 1);
     const HF v2 = now.getHF(otherPos - 2);
     const LL b = LL(halfMask) + 1;
     const bool sg = sign;
     SuperLong ans = 0;
-    // for (size_t k = pos - otherPos + 1; k; --k) {
     for (size_t i = pos - 1; ~(i - otherPos + 1); --i) {
-        // const size_t shiftHF = k - 1;
-        // const size_t i = shiftHF + otherPos - 1;
         HF u1 = getHF(i + 1); // u1 <= v1
+        // equality holds when u1u2... < v1v2... but u1 = v1
         HF u2 = getHF(i);
         HF u3 = getHF(i - 1);
         LL q_ = (LL(u1) * b + u2) / v1;
@@ -287,11 +327,9 @@ SuperLong SuperLong::idivKnuth(const SuperLong& other) {
             r_ += v1;
             if (r_ >= b) break;
         }
-        // isub(otherNorm.mulSmall(q_) << (shiftHF * halfBits));
         isub(now.mulSmall(q_) << ((i - otherPos + 1) * halfBits));
         if (size && sign != sg) {
             --q_;
-            // iadd(otherNorm << (shiftHF * halfBits));
             iadd(now << ((i - otherPos + 1) * halfBits));
         }
         ans <<= halfBits;
@@ -306,7 +344,6 @@ SuperLong SuperLong::idivKnuth(const SuperLong& other) {
     strip();
     swap(*this, ans);
     ans.sign = 0;
-    // printf("ans = %s\n", ans.toStr().c_str());
     return ans;
 }
 
@@ -568,7 +605,16 @@ SuperLong& SuperLong::operator -= (const SuperLong& other) {
 }
 
 SuperLong& SuperLong::operator *= (const SuperLong& other) {
-    imulNaive(other);
+    if (mulMethod == 0) {
+        imulNaive(other);
+    } else if (mulMethod == 1) {
+        imulDaC(other);
+    } else if (mulMethod == 2) {
+        // imulFourier(other);
+    } else {
+        THROW_ERROR("No such mul method in oeprator *=!");
+    }
+    
     sign ^= other.sign;
     strip();
     return *this;
@@ -696,7 +742,16 @@ SuperLong SuperLong::operator - (const SuperLong& other) const {
 }
 
 SuperLong SuperLong::operator * (const SuperLong& other) const {
-    SuperLong now = mulNaive(other);
+    SuperLong now;
+    if (mulMethod == 0) {
+        now = mulNaive(other);
+    } else if (mulMethod == 1) {
+        now = mulDaC(other);
+    } else if (mulMethod == 2) {
+        // now = mulFourier(other);
+    } else {
+        THROW_ERROR("No such mul method in oeprator *=!");
+    }
     now.sign ^= other.sign;
     now.strip();
     return now;
@@ -803,6 +858,38 @@ bool SuperLong::operator == (const SuperLong& other) const {
     return true;
 }
 
+bool SuperLong::operator < (const LL& other) const {
+    if (sign) return 1;
+    return (size == 0 && other) || (size == 1 && data[0] < other);
+}
+
+bool SuperLong::operator > (const LL& other) const {
+    if (sign) return 0;
+    return size > 1 || (size == 1 && data[0] > other);
+}
+
+bool SuperLong::operator == (const LL& other) const {
+    if (sign) return 0;
+    return (size == 0 && other == 0) || (size == 1 && other == data[0]);
+}
+
+bool SuperLong::operator < (const SLL& other) const {
+    if (sign ^ (other < 0)) return sign;
+    if (sign) return (size == 1 && data[0] > -other) || (size > 1);
+    return (size == 0 && other) || (size == 1 && data[0] < other);
+}
+
+bool SuperLong::operator > (const SLL& other) const {
+    if (sign ^ (other < 0)) return !sign;
+    if (sign) return (size == 0 && other) || (size == 1 && data[0] < -other);
+    return (size == 1 && data[0] > other) || (size > 1);
+}
+
+bool SuperLong::operator == (const SLL& other) const {
+    if (sign != (other < 0) || size != (other != 0)) return false;
+    return data[0] == other;
+}
+
 std::istream& operator >> (std::istream& in, SuperLong& a) {
     std::string s; in >> s;
     a = SuperLong::fromStr(s);
@@ -819,4 +906,19 @@ void swap(SuperLong& a, SuperLong& b) {
     std::swap(a.sign, b.sign);
     std::swap(a.size, b.size);
     std::swap(a.len, b.len);
+}
+
+SuperLong abs(const SuperLong& a) {
+    return a.sign ? -a : a;
+}
+
+SuperLong& SuperLong::toAbs() {
+    sign = 0;
+    return *this;
+}
+
+SuperLong& SuperLong::toSign(const bool f) {
+    sign = f;
+    strip();
+    return *this;
 }

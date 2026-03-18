@@ -1,3 +1,4 @@
 build/*
 results/*
 test_cases/*
+__pycache__/*

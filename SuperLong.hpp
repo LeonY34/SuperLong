@@ -14,14 +14,27 @@ using SHF = __int64_t;
 
 class SuperLong {
 private:
+    // vars
     bool sign; // sign bit
     LL* data; // compressed data
     size_t size; // blocks of data used
     size_t len; // total length of data
+
+    // static var
+    /* 
+        0 for naive
+        1 for Divide and Conquer
+        2 for Fast Fourier Transform
+    */
+    inline static int mulMethod = 0;
+
+    // supportings
     static SuperLong fromStr(const std::string& s);
     void iadd(const SuperLong& other);
     void isub(const SuperLong& other);
     void imulNaive(const SuperLong& other);
+    static SuperLong extract(const SuperLong& a, const size_t l, const size_t r);
+    static SuperLong calcMul(const SuperLong& a, const SuperLong& b);
     void imulDaC(const SuperLong& other);
     void imulFourier(const SuperLong& other);
     SuperLong mulNaive(const SuperLong& other) const;
@@ -55,6 +68,7 @@ private:
 
     HF getHF(const size_t i) const;
 public:
+    // basic
     SuperLong() : sign(0), data(nullptr), size(0), len(0) {}
     SuperLong(const SuperLong& other) : sign(other.sign), size(other.size), len(other.size) {
         data = new LL[len];
@@ -66,9 +80,11 @@ public:
         delete[] data;
     }
 
+    // utils
     void stripForce();
     std::string toStr() const;
     void info() const;
+
     // big ones
     SuperLong& operator = (const SuperLong& other);
     SuperLong& operator += (const SuperLong& other);
@@ -111,6 +127,12 @@ public:
     bool operator < (const SuperLong& other) const;
     bool operator > (const SuperLong& other) const;
     bool operator == (const SuperLong& other) const;
+    bool operator < (const LL& other) const;
+    bool operator > (const LL& other) const;
+    bool operator == (const LL& other) const;
+    bool operator < (const SLL& other) const;
+    bool operator > (const SLL& other) const;
+    bool operator == (const SLL& other) const;
     operator bool() const {
         return size;
     }
@@ -120,4 +142,15 @@ public:
     friend std::ostream& operator << (std::ostream& out, const SuperLong& a);
     friend std::istream& operator >> (std::istream& in, SuperLong& a);
     friend void swap(SuperLong& a, SuperLong& b);
+    friend SuperLong abs(const SuperLong& a);
+    SuperLong& toAbs();
+    SuperLong& toSign(const bool f);
+
+    // mul method
+    static void setMulMethod(const int m) {
+        mulMethod = m;
+    }
+    static int currentMulMethod() {
+        return mulMethod;
+    }
 };
