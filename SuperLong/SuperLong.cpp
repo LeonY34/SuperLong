@@ -271,6 +271,51 @@ SuperLong SuperLong::mulDaC(const SuperLong& other) const {
     return calcMul(*this, other).toSign(sg);
 }
 
+// FFT uses long double, which is not stable for big integers
+// So I will change it to NTT
+// ---------------------------------------
+// using Comp = std::complex<long double>;
+// const long double PI = std::acos(-1);
+
+// size_t findupper(size_t x) {
+//     bool f = 0;
+//     while ((x & -x) != x) x -= (x & -x), f = 1;
+//     return x << int(f);
+// }
+
+// inline static void Interpolate(
+//     const SuperLong& data,
+//     Comp* a,
+//     const Comp* o,
+//     size_t sz
+// ) {
+    
+// }
+
+// void SuperLong::imulFourier(const SuperLong& other) {
+//     if (!size || !other.size) return *this = 0, void();
+//     bool sg = sign;
+// }
+
+// SuperLong SuperLong::mulFourier(const SuperLong& other) const {
+//     if (!size || !other.size) return 0;
+//     bool sg = sign;
+//     size_t sz = findupper(2 * (size + other.size));
+//     Comp* a = new Comp[sz];
+//     Comp* b = new Comp[sz];
+//     Comp* o = new Comp[sz];
+//     memset(a, 0, sz * sizeof(Comp));
+//     memset(b, 0, sz * sizeof(Comp));
+//     const Comp omega = std::polar((long double)1.0, PI * 2 / sz);
+//     o[0] = Comp(1);
+//     for (size_t i = 1; i < sz; ++i) o[i] = o[i - 1] * omega;
+//     Interpolate(*this, a, o, sz);
+//     Interpolate(other, b, o, sz);
+//     // omega
+//     const long double scaler = (long double)1.0 / sz;
+//     for (size_t i = 0; i < sz; ++i) 
+// }
+
 HF SuperLong::getHF(const size_t i) const {
     /*
         get a digit in halfbits
@@ -610,7 +655,7 @@ SuperLong& SuperLong::operator *= (const SuperLong& other) {
     } else if (mulMethod == 1) {
         imulDaC(other);
     } else if (mulMethod == 2) {
-        // imulFourier(other);
+        imulFourier(other);
     } else {
         THROW_ERROR("No such mul method in oeprator *=!");
     }
@@ -748,7 +793,7 @@ SuperLong SuperLong::operator * (const SuperLong& other) const {
     } else if (mulMethod == 1) {
         now = mulDaC(other);
     } else if (mulMethod == 2) {
-        // now = mulFourier(other);
+        now = mulFourier(other);
     } else {
         THROW_ERROR("No such mul method in oeprator *=!");
     }

@@ -1,4 +1,1 @@
-build/*
-results/*
-test_cases/*
-__pycache__/*
+.vscode/*
