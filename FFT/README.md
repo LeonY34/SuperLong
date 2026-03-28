@@ -2,6 +2,8 @@
 
 P开头的题目来自[luogu.com.cn](https://www.luogu.com.cn)
 
+更好阅读体验见[blog](https://leony34.github.io/blog/2026/03/28/FFT/#more)。
+
 ## Introduction
 
 FFT用于解决离散卷积问题。比如说已知
