@@ -1,5 +1,7 @@
 # 平面最近点对算法
 
+更好阅读体验见[blog](https://leony34.github.io/blog/2026/04/14/Closest-Pair/#more)
+
 见[oj/1299.cpp](../oj/1299.cpp)和[oj/1299_multiset.cpp](../oj/1299_multiset.cpp).
 
 ## 问题
