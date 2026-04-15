@@ -2,7 +2,7 @@
 
 ## 问题
 
-更好阅读体验见[blog](https://leony34.github.io/blog/2026/04/14/Closest-Pair/#more)
+更好阅读体验见[blog](https://leony34.github.io/blog/2026/04/15/kth-element/)
 
 给定长度为$n$的序列$a$和整数$k\in[1,n]$，求出$a$中第$k$小的数。
 
